@@ -20,3 +20,12 @@ requests==2.18.4
 
 # HTTP Response parser
 beautifulsoup4==4.6.0
+
+# Python parser for human readable dates
+dateparser==0.7.0
+
+# Morphological analysis
+pymorphy2==0.8
+
+# Add a progress meter to your loops in a second
+tqdm==4.19.5
