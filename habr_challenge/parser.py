@@ -27,6 +27,11 @@ class ParserDataCollector:
             user_settings (ArgumentParser):
                user arguments passed to the program.
 
+        Note:
+            user_settings are not used now.
+            They are needed to make Collector more customable and
+            user friendly in a future.
+
         """
         self._parser_result = collections.defaultdict(collections.Counter)
         self._parser_data_collector = self._collect()
@@ -131,39 +136,81 @@ class ParserDataCollector:
 
 
 class Parser:
+    """Parse crawled webpage.
+
+    Implemented with BeautifulSoup4.
+
+    Attributes:
+        _parser_data_collector (ParserDataCollector):
+            collect parsed data in a real time.
+        _article_selector (collections.namedtuple(str, dict)):
+            selector to parse article preview.
+        _article_title_selector (collections.namedtuple(str, dict)):
+            selector to parse article title.
+        _article_publication_datetime_selector (
+            collections.namedtuple(str, dict)
+        ):
+            selector to parse article publication datetime.
+
+    """
 
     ARTICLE_DATA = collections.namedtuple(
         'ARTICLE_DATA', ['title', 'publication_datetime']
     )
 
     def __init__(self, site_config, user_settings):
+        """
+        Args:
+            user_settings (ArgumentParser):
+               user arguments passed to the program.
+            site_config (SiteConfig):
+               get selectors from config
+
+        """
         self._parser_data_collector = ParserDataCollector(user_settings)
 
-        self.article_selector = self._get_selector('article', site_config)
-        self.article_title_selector = self._get_selector(
+        self._article_selector = self._get_selector('article', site_config)
+        self._article_title_selector = self._get_selector(
             'article_title', site_config
         )
-        self.article_publication_datetime_selector = self._get_selector(
+        self._article_publication_datetime_selector = self._get_selector(
             'article_publication_datetime', site_config
         )
 
     def _get_selector(self, selector_name, site_config):
+        """Get selector in a format useful for bs4 parsing.
+
+        Args:
+            selector_name (str): selector name to get.
+            site_config (SiteConfig): selectors are declared in the config.
+
+        Returns:
+            collections.namedtuple(str, dict)
+        """
         selector = getattr(site_config, selector_name)
         return selector.to_bs4_parse_signature()
 
     def parse_articles(self, articles_list):
+        """Parsing method.
+
+        Parse pages with bs4 using Selectors declared in the SiteConfig.
+
+        Args:
+            articles_list (list): list of webpages crawled.
+
+        """
         soup = bs4.BeautifulSoup(articles_list, 'html.parser')
         for article_preview in soup.find_all(
-            self.article_selector.name,
-            **self.article_selector.css_kwargs
+            self._article_selector.name,
+            **self._article_selector.css_kwargs
         ):
             article_publication_datetime = article_preview.find(
-                self.article_publication_datetime_selector.name,
-                **self.article_publication_datetime_selector.css_kwargs
+                self._article_publication_datetime_selector.name,
+                **self._article_publication_datetime_selector.css_kwargs
             ).text
             article_title = article_preview.find(
-                self.article_title_selector.name,
-                **self.article_title_selector.css_kwargs
+                self._article_title_selector.name,
+                **self._article_title_selector.css_kwargs
             ).text
 
             article_data = self.ARTICLE_DATA(
@@ -173,4 +220,10 @@ class Parser:
 
     @property
     def result_dict(self):
-        return self._parser_data_collector.result
+        """Parser results.
+
+        Returns:
+            (dict): ParserDataCollector result
+
+        """
+        return self._parser_data_collector.result_dict

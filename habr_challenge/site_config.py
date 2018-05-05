@@ -2,6 +2,15 @@ import collections
 
 
 class Selector:
+    """Represent the rules how a web element may be found.
+
+    Attributes:
+        name (str): selector name.
+            Example: 'span', 'div', ...
+        class_ (str or None): class identifying a web element.
+        id_ (str or None): id identifying a web element.
+
+    """
 
     SELECTOR_PARSE_SIGNATURE = collections.namedtuple(
         'SELECTOR_PARSE_SIGNATURE', ['name', 'css_kwargs']
@@ -13,6 +22,12 @@ class Selector:
         self.id_ = id_
 
     def to_bs4_parse_signature(self):
+        """Return Selector in a bs4 usable representation.
+
+        Returns:
+            collections.namedtuple(str, dict)
+
+        """
         return self.SELECTOR_PARSE_SIGNATURE(
             self.name,
             {
@@ -23,6 +38,12 @@ class Selector:
 
 
 class SiteConfig:
+    """Declare site crawling configuration.
+
+    Attributes:
+        _site_config (dict)
+
+    """
 
     SITE_CONFIG = {
         'habr': {
@@ -41,9 +62,27 @@ class SiteConfig:
     }
 
     def __init__(self, site_name):
+        """
+        Args:
+            site_name (string): name of the site to get config for.
+
+        """
         self._site_config = self._get_site_config(site_name)
 
     def __getattr__(self, selector_name):
+        """Get config values by keys.
+
+        Args:
+            selector_name (str): key to get config value upon.
+
+        Returns:
+            (dict value): selector representation.
+
+        Raises:
+            AttributeError: selector is not defined in a config,
+                key does not exist.
+
+        """
         selector = self._site_config.get(selector_name)
         if selector is None:
             raise AttributeError(
@@ -56,6 +95,20 @@ class SiteConfig:
         return selector
 
     def _get_site_config(self, site_name):
+        """There may be many different sites which its own configs.
+        Get the one by site name.
+
+        Args:
+            site_name (str): site name to get config for.
+
+        Returns:
+            (dict): specific site config.
+
+        Raises:
+            Exception: site config is not defined,
+                key does not exist.
+
+        """
         site_config = self.SITE_CONFIG.get(site_name)
         if site_config is None:
             raise Exception(
@@ -68,6 +121,8 @@ class SiteConfig:
 
     @property
     def articles_list_url(self):
+        """Return article list url to parse.
+        """
         return '{url}{pagination}'.format(
             url=self._site_config['url'],
             pagination=self._site_config.get('pagination', '')
