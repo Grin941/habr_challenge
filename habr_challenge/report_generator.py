@@ -66,7 +66,7 @@ class ReportGenerator:
             popular_words_col_width
         )
 
-    def _print_header(self):
+    def _print_header(self):  # pragma: no cover
         """Print report header.
         """
         header = self._report_format_string.format(
@@ -82,7 +82,7 @@ class ReportGenerator:
         print(header)
         print(self._rows_separator * self._table_width)
 
-    def _print_body(self):
+    def _print_body(self):  # pragma: no cover
         """Print report body.
         """
         for week, popular_words in self._report_data_dict.items():
@@ -98,7 +98,7 @@ class ReportGenerator:
             print(body)
         print(self._rows_separator * self._table_width)
 
-    def print_report(self):
+    def print_report(self):  # pragma: no cover
         """Public interface to print a report.
         """
         self._print_header()

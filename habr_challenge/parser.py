@@ -21,7 +21,7 @@ class ParserDataCollector:
 
     """
 
-    def __init__(self, user_settings):
+    def __init__(self, user_settings=None):
         """
         Args:
             user_settings (ArgumentParser):
@@ -43,7 +43,7 @@ class ParserDataCollector:
         when article has been published.
 
         Args:
-            article_publication_datetime (datetime): publication datetime.
+            article_publication_datetime (str): crawled publication datetime.
 
         Returns:
             (str, str) - formatted dates of week start and end.
@@ -108,7 +108,9 @@ class ParserDataCollector:
         """Public interface to send data to the coroutine.
 
         Args:
-            article_data (collections.namedtuple(str, datetime)):
+            article_data (collections.namedtuple(
+                str:title, str:publication_datetime)
+            ):
                 webpage parsed data.
 
         """
@@ -135,7 +137,7 @@ class ParserDataCollector:
         return result
 
 
-class Parser:
+class Parser:  # pragma: no cover
     """Parse crawled webpage.
 
     Implemented with BeautifulSoup4.

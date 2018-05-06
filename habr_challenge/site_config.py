@@ -21,6 +21,24 @@ class Selector:
         self.class_ = class_
         self.id_ = id_
 
+    def __repr__(self):
+        return (
+            'Selector('
+            '"name"="{name}"'
+            '"class"="{class_}"'
+            '"id"="{id_}"'
+            ')'
+        ).format(
+            name=self.name, class_=self.class_, id_=self.id_
+        )
+
+    def __eq__(self, other):
+        return (
+            self.name, self.class_, self.id_
+        ) == (
+            other.name, other.class_, other.id_
+        )
+
     def to_bs4_parse_signature(self):
         """Return Selector in a bs4 usable representation.
 
@@ -69,6 +87,11 @@ class SiteConfig:
         """
         self._site_config = self._get_site_config(site_name)
 
+    def __repr__(self):
+        return 'SiteConfig({url})'.format(
+            url=self._site_config['url']
+        )
+
     def __getattr__(self, selector_name):
         """Get config values by keys.
 
@@ -94,7 +117,8 @@ class SiteConfig:
 
         return selector
 
-    def _get_site_config(self, site_name):
+    @classmethod
+    def _get_site_config(cls, site_name):
         """There may be many different sites which its own configs.
         Get the one by site name.
 
@@ -105,13 +129,13 @@ class SiteConfig:
             (dict): specific site config.
 
         Raises:
-            Exception: site config is not defined,
+            KeyError: site config is not defined,
                 key does not exist.
 
         """
-        site_config = self.SITE_CONFIG.get(site_name)
+        site_config = cls.SITE_CONFIG.get(site_name)
         if site_config is None:
-            raise Exception(
+            raise KeyError(
                 'Please provide {site_name} site configuration'.format(
                     site_name=site_name
                 )

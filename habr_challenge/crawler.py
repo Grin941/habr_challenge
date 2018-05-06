@@ -9,7 +9,7 @@ from habr_challenge.parser import Parser
 __all__ = ['Crawler']
 
 
-class Crawler:
+class Crawler:  # pragma: no cover
     """Crawle webpages and return parser result.
 
     Attributes:
