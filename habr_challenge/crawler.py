@@ -2,9 +2,6 @@ import requests
 
 from tqdm import tqdm as progress_bar
 
-from habr_challenge.site_config import SiteConfig
-from habr_challenge.parser import Parser
-
 
 __all__ = ['Crawler']
 
@@ -14,6 +11,8 @@ class Crawler:  # pragma: no cover
 
     Attributes:
        _site_config (SiteConfig): config of the site to be crawled.
+       _user_settings (ArgumentParser):
+           user arguments passed to the program.
 
     """
 
@@ -26,16 +25,33 @@ class Crawler:  # pragma: no cover
                        "Safari/537.36"),
     }
 
-    def __init__(self, site_name):
-        """
+    def __init__(self, site_config, user_settings):
+        self._site_config = site_config
+        self._user_settings = user_settings
+
+    @staticmethod
+    def _get_pagination_range(user_settings):
+        """Get pagination range from user_settings.
+
+        Return pretty shown pagination range.
+
         Args:
-            site_name (str): Name of the site to be crawled
+            user_settings (ArgumentParser):
+                user arguments passed to the program.
 
-        Note:
-            site_name should be equal the one defined in a SiteConfig
+        Returns:
+            pages_range (
+              tqdm(range) or range
+            ): iterable over the site pages with pretty statusbar.
+
 
         """
-        self._site_config = SiteConfig(site_name)
+
+        pages_range = range(1, user_settings.pages + 1)
+        show_progress = progress_bar if \
+            user_settings.show_progress else lambda x: x
+
+        return show_progress(pages_range)
 
     def _crawl_articles(self, pages_range):
         """Crawl each webpage with articles during pagination.
@@ -57,27 +73,15 @@ class Crawler:  # pragma: no cover
             )
             yield articles_list.text
 
-    def crawl(self, user_settings):
+    def crawl(self):
         """Crawler interface to crawl webpages.
 
-        Crawler passes crawled web pages to a Parser
-        and returns Parser result dictionary.
+        Crawler crawles site through pagination.
 
-        Args:
-            user_settings (ArgumentParser):
-               user arguments passed to the program.
-
-        Returns:
-            (dict): parsed data dict.
+        Yields:
+            (str): crawlerd articles list webpage.
 
         """
-        parser = Parser(self._site_config, user_settings)
-        show_progress = progress_bar if \
-            user_settings.show_progress else lambda x: x
-
-        for articles_list in self._crawl_articles(
-            pages_range=show_progress(range(1, user_settings.pages + 1))
-        ):
-            parser.parse_articles(articles_list)
-
-        return parser.result_dict
+        pages_range = self._get_pagination_range(self._user_settings)
+        for articles_list in self._crawl_articles(pages_range):
+            yield articles_list

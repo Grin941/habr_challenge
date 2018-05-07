@@ -5,7 +5,7 @@ import datetime
 import pymorphy2
 import string
 
-from habr_challenge import coroutine
+from habr_challenge.common import coroutine
 
 
 __all__ = ['Parser']
@@ -192,7 +192,7 @@ class Parser:  # pragma: no cover
         selector = getattr(site_config, selector_name)
         return selector.to_bs4_parse_signature()
 
-    def parse_articles(self, articles_list):
+    def _parse_articles(self, articles_list):
         """Parsing method.
 
         Parse pages with bs4 using Selectors declared in the SiteConfig.
@@ -219,6 +219,25 @@ class Parser:  # pragma: no cover
                 article_title, article_publication_datetime
             )
             self._parser_data_collector.collect(article_data)
+
+    def parse(self, articles_list_pagination_gen):
+        """Parser interface to parse webpages crawled.
+
+        Crawler passes crawled web pages to a Parser
+        that returns Parser result dictionary.
+
+        Args:
+            articles_list_pagination_gen (genirator):
+                generator of strings representing artiles list paginated.
+
+        Returns:
+            (dict): parsed data dict.
+
+        """
+        for articles_list_from_page in articles_list_pagination_gen:
+            self._parse_articles(articles_list_from_page)
+
+        return self.result_dict
 
     @property
     def result_dict(self):

@@ -1,9 +1,7 @@
 # -*- coding: utf-8 -*-
 import argparse
 
-from habr_challenge.crawler import Crawler
-from habr_challenge.report_generator import ReportGenerator
-
+import habr_challenge as hc
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
@@ -21,5 +19,11 @@ if __name__ == '__main__':
     user_settings = parser.parse_args()
     assert user_settings.pages > 0, "Please pass --pages > 0"
 
-    articles_data = Crawler('habr').crawl(user_settings)
-    ReportGenerator(articles_data).print_report()
+    site_config = hc.SiteConfig('habr')
+    articles_list_pagination_gen = hc.Crawler(
+        site_config, user_settings
+    ).crawl()
+    articles_data = hc.Parser(
+        site_config, user_settings
+    ).parse(articles_list_pagination_gen)
+    hc.ReportGenerator(articles_data).print_report()
