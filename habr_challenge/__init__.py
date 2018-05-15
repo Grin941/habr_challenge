@@ -1,6 +1,5 @@
 from .site_config import SiteConfig
-from .crawler import RequestsCrawler as Crawler
-from .parser import BS4Parser as Parser
 from .report_generator import ReportGenerator
+from habr_challenge import crawler, parser
 
-__all__ = ['SiteConfig', 'Crawler', 'Parser', 'ReportGenerator']
+__all__ = ['SiteConfig', 'crawler', 'parser', 'ReportGenerator']

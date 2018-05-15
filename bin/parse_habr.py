@@ -1,6 +1,10 @@
 import argparse
 
-import habr_challenge as hc
+from habr_challenge import \
+    SiteConfig, \
+    ReportGenerator, \
+    crawler, \
+    parser
 
 
 def parse_user_settings():
@@ -23,14 +27,14 @@ def main():
     user_settings = parse_user_settings()
     assert user_settings.pages > 0, "Please pass --pages > 0"
 
-    site_config = hc.SiteConfig('habr')
-    articles_list_pagination_gen = hc.Crawler(
+    site_config = SiteConfig('habr')
+    articles_list_pagination_gen = crawler.crawl(
         site_config, user_settings
-    ).crawl()
-    articles_data = hc.Parser(
-        site_config, user_settings
-    ).parse(articles_list_pagination_gen)
-    hc.ReportGenerator(articles_data).print_report()
+    )
+    articles_data = parser.parse(
+        articles_list_pagination_gen, site_config, user_settings
+    )
+    ReportGenerator(articles_data).print_report()
 
 
 if __name__ == '__main__':

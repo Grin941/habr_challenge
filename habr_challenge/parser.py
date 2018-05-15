@@ -1,258 +1,94 @@
 import bs4
 import collections
-import dateparser
-import datetime
-import pymorphy2
-import string
 
-from habr_challenge.common import coroutine
+from habr_challenge.parser_data_collector import ParserDataCollector
 
 
-__all__ = ['BS4Parser']
+ARTICLE_DATA = collections.namedtuple(
+    'ARTICLE_DATA', ['title', 'publication_datetime']
+)
 
 
-class ParserDataCollector:
-    """Coroutine collecting Parser result in a real time.
+def _get_selectors_from_config(site_config, *selector_names):
+    """Get selectors in a format useful for bs4 parsing.
 
-    Attributes:
-        _parser_result (defaultdict(<class 'collections.Counter'>, {})):
-            container collecting Parser results
-        _parser_data_collector (function): coroutine itself
+    Args:
+        selector_name (str): selector name to get.
 
-    """
-
-    def __init__(self, user_settings=None):
-        """
-        Args:
-            user_settings (ArgumentParser):
-               user arguments passed to the program.
-
-        Note:
-            user_settings are not used now.
-            They are needed to make Collector more customable and
-            user friendly in a future.
-
-        """
-        self._parser_result = collections.defaultdict(collections.Counter)
-        self._parser_data_collector = self._collect()
-
-    def _normalize_publication_datetime(self, article_publication_datetime):
-        """Normalize article publication datetime.
-
-        Estimate the start and the and of the week\
-        when article has been published.
-
-        Args:
-            article_publication_datetime (str): crawled publication datetime.
-
-        Returns:
-            (str, str) - formatted dates of week start and end.
-
-        """
-        datetime_parsed = dateparser.parse(article_publication_datetime)
-        week_start = datetime_parsed - datetime.timedelta(
-            days=datetime_parsed.weekday()
-        )
-        week_end = week_start + datetime.timedelta(days=6)
-
-        return (
-            week_start.strftime('%d-%m-%Y'),
-            week_end.strftime('%d-%m-%Y')
-        )
-
-    def _normalize_title(self, article_title):
-        """Normalize article title.
-
-        - lowercase title
-        - remove punctuation marks from title
-        - filter only nouns
-        - normalize nouns
-        - count each noun occurance in the title
-
-        Args:
-            article_title (str): article title.
-
-        Returns:
-            collections.Counter - count each noun occurance in the title.
-
-        """
-        morph = pymorphy2.MorphAnalyzer()
-        title_words = article_title.lower().strip(
-            string.punctuation + "«»"
-        ).split(' ')
-        title_morphs = (morph.parse(word)[0] for word in title_words)
-        title_nouns = filter(
-            lambda word_morph: 'NOUN' in word_morph.tag, title_morphs
-        )
-        return collections.Counter(
-            map(lambda noun: noun.normal_form, title_nouns)
-        )
-
-    @coroutine
-    def _collect(self):
-        """Collect parsed articles in a real time.
-
-        Normalize and store parsed data.
-
-        """
-        while True:
-            article_data = (yield)
-            article_title_words = self._normalize_title(article_data.title)
-            article_week_range = self._normalize_publication_datetime(
-                article_data.publication_datetime
-            )
-
-            self._parser_result[article_week_range].update(article_title_words)
-
-    def collect(self, article_data):
-        """Public interface to send data to the coroutine.
-
-        Args:
-            article_data (collections.namedtuple(
-                str:title, str:publication_datetime)
-            ):
-                webpage parsed data.
-
-        """
-        self._parser_data_collector.send(article_data)
-
-    @property
-    def result_dict(self):
-        """ParserDataCollector results in a user defined format.
-
-        Show only 3 most common words for a week interval.
-
-        Example:
-            {
-                ('01-01-2000', '07-07-2000'): 'noun1 noun2 noun3'
-            }
-
-        Returns:
-            (dict): result dictionary
-
-        """
-        result = {}
-        for k, v in self._parser_result.items():
-            result[k] = ' '.join(map(lambda x: x[0], v.most_common(3)))
-        return result
-
-
-class BaseParser:  # pragma: no cover
-    """Parse crawled webpage.
-
-    Attributes:
-        _parser_data_collector (ParserDataCollector):
-            collect parsed data in a real time.
-        _article_selector (collections.namedtuple(str, dict)):
-            selector to parse article preview.
-        _article_title_selector (collections.namedtuple(str, dict)):
-            selector to parse article title.
-        _article_publication_datetime_selector (
-            collections.namedtuple(str, dict)
-        ):
-            selector to parse article publication datetime.
+    Returns:
+        {str: collections.namedtuple(str, dict)}
 
     """
+    selectors = {}
+    for selector_name in selector_names:
+        selector = getattr(site_config, selector_name)
+        selectors[selector_name] = selector.to_bs4_parse_signature()
+    return selectors
 
-    ARTICLE_DATA = collections.namedtuple(
-        'ARTICLE_DATA', ['title', 'publication_datetime']
+
+def _parse_articles(articles_list, **selectors):
+    """Parsing method.
+
+    Parse pages with bs4 using Selectors declared in the SiteConfig.
+
+    Args:
+        articles_list (list): list of webpages crawled.
+
+    """
+    article_selector = selectors['article']
+    article_publication_datetime_selector = selectors[
+        'article_publication_datetime'
+    ]
+    article_title_selector = selectors['article_title']
+
+    soup = bs4.BeautifulSoup(articles_list, 'html.parser')
+    for article_preview in soup.find_all(
+        article_selector.name,
+        **article_selector.css_kwargs
+    ):
+        article_publication_datetime = article_preview.find(
+            article_publication_datetime_selector.name,
+            **article_publication_datetime_selector.css_kwargs
+        ).text
+        article_title = article_preview.find(
+            article_title_selector.name,
+            **article_title_selector.css_kwargs
+        ).text
+
+        article_data = ARTICLE_DATA(
+            article_title, article_publication_datetime
+        )
+        yield article_data
+
+
+def parse(articles_list_pagination_gen, site_config, user_settings):
+    """Parser interface to parse webpages crawled.
+
+    Crawler passes crawled web pages to a Parser
+    that returns Parser result dictionary.
+
+    Args:
+        articles_list_pagination_gen (genirator):
+            generator of strings representing artiles list paginated.
+        site_config (SiteConfig):
+           get selectors from config
+        user_settings (ArgumentParser):
+           user arguments passed to the program.
+
+    Returns:
+        (dict): parsed data dict.
+
+    """
+    parser_data_collector = ParserDataCollector(user_settings)
+    site_selectors = _get_selectors_from_config(
+        site_config,
+        *('article', 'article_publication_datetime', 'article_title')
     )
 
-    def __init__(self, site_config, user_settings):
-        """
-        Args:
-            user_settings (ArgumentParser):
-               user arguments passed to the program.
-            site_config (SiteConfig):
-               get selectors from config
-
-        """
-        self._parser_data_collector = ParserDataCollector(user_settings)
-
-        self._article_selector = self._get_selector('article', site_config)
-        self._article_title_selector = self._get_selector(
-            'article_title', site_config
-        )
-        self._article_publication_datetime_selector = self._get_selector(
-            'article_publication_datetime', site_config
-        )
-
-    def _get_selector(self, selector_name, site_config):
-        """Get selector in a format useful for bs4 parsing.
-
-        Args:
-            selector_name (str): selector name to get.
-            site_config (SiteConfig): selectors are declared in the config.
-
-        Returns:
-            collections.namedtuple(str, dict)
-        """
-        selector = getattr(site_config, selector_name)
-        return selector.to_bs4_parse_signature()
-
-    def _parse_articles(self, articles_list):
-        """Parsing method.
-
-        Parse pages with bs4 using Selectors declared in the SiteConfig.
-
-        Args:
-            articles_list (list): list of webpages crawled.
-
-        """
-        raise NotImplementedError(
-            'You are free to use every parser you want'
-        )
-
-    def parse(self, articles_list_pagination_gen):
-        """Parser interface to parse webpages crawled.
-
-        Crawler passes crawled web pages to a Parser
-        that returns Parser result dictionary.
-
-        Args:
-            articles_list_pagination_gen (genirator):
-                generator of strings representing artiles list paginated.
-
-        Returns:
-            (dict): parsed data dict.
-
-        """
-        for articles_list_from_page in articles_list_pagination_gen:
-            for article_data in self._parse_articles(articles_list_from_page):
-                self._parser_data_collector.collect(article_data)
-
-        return self.result_dict
-
-    @property
-    def result_dict(self):
-        """Parser results.
-
-        Returns:
-            (dict): ParserDataCollector result
-
-        """
-        return self._parser_data_collector.result_dict
-
-
-class BS4Parser(BaseParser):
-    """Parser implemented with BeautifulSoup4."""
-
-    def _parse_articles(self, articles_list):
-        soup = bs4.BeautifulSoup(articles_list, 'html.parser')
-        for article_preview in soup.find_all(
-            self._article_selector.name,
-            **self._article_selector.css_kwargs
+    for articles_list_from_page in articles_list_pagination_gen:
+        for article_data in _parse_articles(
+            articles_list_from_page, **site_selectors
         ):
-            article_publication_datetime = article_preview.find(
-                self._article_publication_datetime_selector.name,
-                **self._article_publication_datetime_selector.css_kwargs
-            ).text
-            article_title = article_preview.find(
-                self._article_title_selector.name,
-                **self._article_title_selector.css_kwargs
-            ).text
+            parser_data_collector.collect(article_data)
 
-            article_data = self.ARTICLE_DATA(
-                article_title, article_publication_datetime
-            )
-            yield article_data
+    return parser_data_collector.result_dict
