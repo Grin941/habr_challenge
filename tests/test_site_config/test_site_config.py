@@ -3,11 +3,6 @@ import pytest
 from habr_challenge.site_config import Selector, SiteConfig
 
 
-@pytest.fixture
-def selector():
-    return Selector('div', class_='test', id_='me')
-
-
 def test_selector_to_bs4_parse_signature(selector):
     selector_parse_signature = selector.to_bs4_parse_signature()
     assert selector_parse_signature.name == selector.name
@@ -15,16 +10,6 @@ def test_selector_to_bs4_parse_signature(selector):
         'class_': selector.class_,
         'id': selector.id_,
     }
-
-
-@pytest.fixture
-def site_config():
-    SiteConfig.SITE_CONFIG['test'] = {
-        'url': 'http://test.com/',
-        'pagination': 'pages{page}/',
-        'div': Selector('div', class_='test_me'),
-    }
-    return SiteConfig('test')
 
 
 def test_site_config_getattr_to_get_selector(site_config):

@@ -26,6 +26,8 @@ $ parse_habr
 
 For more information type: ```$ parse_habr -h```
 
+![ScreenShot](http://drive.google.com/uc?export=view&id=1p2hS3K7isW1ftD1Ox_vYJ6gnJwNtW6Gz)
+
 ## Testing
 ```
 $ PYTHONPATH=. pytest

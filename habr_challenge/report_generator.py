@@ -1,4 +1,15 @@
+import collections
+
+from habr_challenge.common import cached_property
+
+
 __all__ = ['ReportGenerator']
+
+
+ReportTemplate = collections.namedtuple(
+    'ReportTemplate',
+    ['body', 'rows_separator', 'columns_separator']
+)
 
 
 class ReportGenerator:
@@ -11,36 +22,26 @@ class ReportGenerator:
                 {
                     ('01-01-2000', '07-07-2000'): 'noun1 noun2 noun3'
                 }
-        _report_header (tuple): tuple with report header titles.
-        _report_columns_width (tuple): tuple with column width.
-        _table_width (int): table total width.
-        _report_format_string (str): string represents report skeleton.
-        _columns_separator (str): string character separating
-            columns in a report.
-        _rows_separator (str): string character separating rows in a report.
 
     """
 
+    REPORT_TEMPLATE = ReportTemplate(
+        body=(
+            '{col_data[0]:{col_width[0]}}{col_sep}'
+            '{col_data[1]:^{col_width[1]}}{col_sep}'
+            '{col_data[2]:^{col_width[2]}}{col_sep}'
+        ),
+        rows_separator='-',
+        columns_separator='|'
+    )
+
+    REPORT_HEADER = ('Начало недели', 'Конец недели', 'Популярные слова')
+
     def __init__(self, report_data_dict):
         self._report_data_dict = report_data_dict
-        self._report_header = (
-            'Начало недели', 'Конец недели', 'Популярные слова'
-        )
 
-        self._report_columns_width = self._get_report_columns_width()
-        self._table_width = sum(
-            self._report_columns_width
-        ) + 3  # Keep in mind 3 column separators
-
-        self._report_format_string = (
-            '{week_begin:{week_begin_col_width}}{sep}'
-            '{week_end:^{week_end_col_width}}{sep}'
-            '{popular_words:^{popular_words_col_width}}{sep}'
-        )
-        self._columns_separator = '|'
-        self._rows_separator = '-'
-
-    def _get_report_columns_width(self):
+    @cached_property
+    def columns_width(self):
         """Estimate width of each report columns.
 
         Popular words column width equals
@@ -51,10 +52,10 @@ class ReportGenerator:
 
         """
         week_begin_col_width = len(
-            self._report_header[0]
+            self.REPORT_HEADER[0]
         ) + 1  # Note one whitespace at the end
         week_end_col_width = len(
-            self._report_header[1]
+            self.REPORT_HEADER[1]
         ) + 2  # Note two whitespaces at the left and right
         popular_words_col_width = len(
             max(self._report_data_dict.values(), key=len)
@@ -66,37 +67,40 @@ class ReportGenerator:
             popular_words_col_width
         )
 
+    @cached_property
+    def table_width(self):
+        return sum(
+            self.columns_width
+        ) + 3  # Keep in mind 3 column separators
+
+    def _print_boarder(self):
+        print(self.REPORT_TEMPLATE.rows_separator * self.table_width)
+
     def _print_header(self):  # pragma: no cover
         """Print report header.
         """
-        header = self._report_format_string.format(
-            week_begin=self._report_header[0],
-            week_begin_col_width=self._report_columns_width[0],
-            week_end=self._report_header[1],
-            week_end_col_width=self._report_columns_width[1],
-            popular_words=self._report_header[2],
-            popular_words_col_width=self._report_columns_width[2],
-            sep=self._columns_separator
+        header = self.REPORT_TEMPLATE.body.format(
+            col_data=self.REPORT_HEADER,
+            col_width=self.columns_width,
+            col_sep=self.REPORT_TEMPLATE.columns_separator
         )
-        print(self._rows_separator * self._table_width)
+        self._print_boarder()
         print(header)
-        print(self._rows_separator * self._table_width)
+        self._print_boarder()
 
     def _print_body(self):  # pragma: no cover
         """Print report body.
         """
-        for week, popular_words in self._report_data_dict.items():
-            body = self._report_format_string.format(
-                week_begin=week[0],
-                week_begin_col_width=self._report_columns_width[0],
-                week_end=week[1],
-                week_end_col_width=self._report_columns_width[1],
-                popular_words=popular_words,
-                popular_words_col_width=self._report_columns_width[2],
-                sep=self._columns_separator
+        for (
+            week_begin, week_end
+        ), popular_words in self._report_data_dict.items():
+            body = self.REPORT_TEMPLATE.body.format(
+                col_data=(week_begin, week_end, popular_words),
+                col_width=self.columns_width,
+                col_sep=self.REPORT_TEMPLATE.columns_separator
             )
             print(body)
-        print(self._rows_separator * self._table_width)
+        self._print_boarder()
 
     def print_report(self):  # pragma: no cover
         """Public interface to print a report.

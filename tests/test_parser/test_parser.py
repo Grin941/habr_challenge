@@ -1,21 +1,4 @@
-import pytest
 import collections
-
-
-from habr_challenge.parser import ParserDataCollector, Parser
-
-
-@pytest.fixture
-def parser_data_collector():
-    return ParserDataCollector()
-
-
-@pytest.fixture
-def article_data():
-    article_publication_datetime = '1 января 2010'
-    title = '(Законы Акина) законы космической инженерии'
-
-    return Parser.ARTICLE_DATA(title, article_publication_datetime)
 
 
 def test_data_collector_normalizes_publication_datetime(

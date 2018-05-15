@@ -8,7 +8,7 @@ import string
 from habr_challenge.common import coroutine
 
 
-__all__ = ['Parser']
+__all__ = ['BS4Parser']
 
 
 class ParserDataCollector:
@@ -137,10 +137,8 @@ class ParserDataCollector:
         return result
 
 
-class Parser:  # pragma: no cover
+class BaseParser:  # pragma: no cover
     """Parse crawled webpage.
-
-    Implemented with BeautifulSoup4.
 
     Attributes:
         _parser_data_collector (ParserDataCollector):
@@ -201,6 +199,45 @@ class Parser:  # pragma: no cover
             articles_list (list): list of webpages crawled.
 
         """
+        raise NotImplementedError(
+            'You are free to use every parser you want'
+        )
+
+    def parse(self, articles_list_pagination_gen):
+        """Parser interface to parse webpages crawled.
+
+        Crawler passes crawled web pages to a Parser
+        that returns Parser result dictionary.
+
+        Args:
+            articles_list_pagination_gen (genirator):
+                generator of strings representing artiles list paginated.
+
+        Returns:
+            (dict): parsed data dict.
+
+        """
+        for articles_list_from_page in articles_list_pagination_gen:
+            for article_data in self._parse_articles(articles_list_from_page):
+                self._parser_data_collector.collect(article_data)
+
+        return self.result_dict
+
+    @property
+    def result_dict(self):
+        """Parser results.
+
+        Returns:
+            (dict): ParserDataCollector result
+
+        """
+        return self._parser_data_collector.result_dict
+
+
+class BS4Parser(BaseParser):
+    """Parser implemented with BeautifulSoup4."""
+
+    def _parse_articles(self, articles_list):
         soup = bs4.BeautifulSoup(articles_list, 'html.parser')
         for article_preview in soup.find_all(
             self._article_selector.name,
@@ -218,33 +255,4 @@ class Parser:  # pragma: no cover
             article_data = self.ARTICLE_DATA(
                 article_title, article_publication_datetime
             )
-            self._parser_data_collector.collect(article_data)
-
-    def parse(self, articles_list_pagination_gen):
-        """Parser interface to parse webpages crawled.
-
-        Crawler passes crawled web pages to a Parser
-        that returns Parser result dictionary.
-
-        Args:
-            articles_list_pagination_gen (genirator):
-                generator of strings representing artiles list paginated.
-
-        Returns:
-            (dict): parsed data dict.
-
-        """
-        for articles_list_from_page in articles_list_pagination_gen:
-            self._parse_articles(articles_list_from_page)
-
-        return self.result_dict
-
-    @property
-    def result_dict(self):
-        """Parser results.
-
-        Returns:
-            (dict): ParserDataCollector result
-
-        """
-        return self._parser_data_collector.result_dict
+            yield article_data
