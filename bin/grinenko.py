@@ -1,9 +1,9 @@
-# -*- coding: utf-8 -*-
 import argparse
 
 import habr_challenge as hc
 
-if __name__ == '__main__':
+
+def parse_user_settings():
     parser = argparse.ArgumentParser(
         description='Print 3 most popular nouns from Habr feed article titles.'
     )
@@ -16,7 +16,11 @@ if __name__ == '__main__':
         '--show-progress', action='store_false',
         help='do you want to see progress bar?'
     )
-    user_settings = parser.parse_args()
+    return parser.parse_args()
+
+
+def main():
+    user_settings = parse_user_settings()
     assert user_settings.pages > 0, "Please pass --pages > 0"
 
     site_config = hc.SiteConfig('habr')
@@ -27,3 +31,7 @@ if __name__ == '__main__':
         site_config, user_settings
     ).parse(articles_list_pagination_gen)
     hc.ReportGenerator(articles_data).print_report()
+
+
+if __name__ == '__main__':
+    main()

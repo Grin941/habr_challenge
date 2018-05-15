@@ -27,4 +27,7 @@ setup(
         'Programming Language :: Python :: Implementation :: CPython',
         'Topic :: Utilities',
     ],
+    entry_points={
+        'console_scripts': ['parse_habr=bin.parse_habr:main']
+    },
 )

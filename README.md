@@ -21,10 +21,10 @@ $ make
 ## Usage
 
 ```
-$ python habr_challenge.py
+$ parse_habr 
 ```
 
-For more information type: ```$ python habr_challenge.py -h```
+For more information type: ```$ parse_habr -h```
 
 ## Testing
 ```
